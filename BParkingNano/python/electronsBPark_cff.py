@@ -90,6 +90,9 @@ electronsForAnalysis = cms.EDProducer(
   # module flags
   addUserVarsExtra = cms.bool(False),
   efficiencyStudy = cms.bool(False), # If True, flag electron selections instead of cutting; saves extra variables
+  saveRegressionVars = cms.bool(False), # If True, save regression variables
+  recHitCollectionEB = cms.InputTag("reducedEgamma:reducedEBRecHits"),
+  recHitCollectionEE = cms.InputTag("reducedEgamma:reducedEERecHits"),
 )
 
 # finer trigger skim -- only select events that have >= 2 reco trigger-matched electrons
@@ -190,7 +193,7 @@ electronBParkTable = cms.EDProducer("SimplePATElectronFlatTableProducer",
 
         tightCharge = Var("isGsfCtfScPixChargeConsistent() + isGsfScPixChargeConsistent()",int,doc="Tight charge criteria (0:none, 1:isGsfScPixChargeConsistent, 2:isGsfCtfScPixChargeConsistent)"),
         convVeto = Var("passConversionVeto()",bool,doc="pass conversion veto"),
-    #    lostHits = Var("gsfTrack.hitPattern.numberOfLostHits('MISSING_INNER_HITS')","uint8",doc="number of missing inner hits"),
+        # lostHits = Var("gsfTrack.hitPattern.numberOfLostHits('MISSING_INNER_HITS')","uint8",doc="number of missing inner hits"),
         trkRelIso = Var("trackIso/pt",float,doc="PF relative isolation dR=0.3, total (deltaBeta corrections)"),
         isPF = Var("userInt('isPF')",bool,doc="electron is PF candidate"),
         isLowPt = Var("userInt('isLowPt')",bool,doc="electron is LowPt candidate"),
@@ -332,8 +335,12 @@ from PhysicsTools.BParkingNano.modifiers_cff import *
 # DiEle.toModify(electronsForAnalysis, ...)
 vbfSkimming2023.toModify(countTrgElectrons, minNumber = cms.uint32(0))
 vbfSkimming2024.toModify(countTrgElectrons, minNumber = cms.uint32(0))
+
+# Trigger matching study
 triggerMatchingStudy.toModify(countTrgElectrons, minNumber = cms.uint32(0))
 
+
+# Selection efficiency study (-> disable all cuts, store them as flags)
 efficiencyStudy.toModify(electronsForAnalysis, efficiencyStudy = cms.bool(True))
 
 efficiencyStudy.toModify(electronBParkTable,
@@ -344,5 +351,97 @@ efficiencyStudy.toModify(electronBParkTable,
             # convVeto var already saved
         )
 )
-
 efficiencyStudy.toModify(countTrgElectrons, minNumber = cms.uint32(0))
+
+# Regression study (-> save extra variables needed for regression training and application)
+regressionVars.toModify(electronsForAnalysis, saveRegressionVars = cms.bool(True))
+
+regressionVars.toModify(electronBParkTable, 
+    variables = cms.PSet(
+        electronBParkTable.variables,
+        # regression variables
+        SCeta = Var("superCluster().eta()",float,doc="eta of the supercluster",precision=10),
+        SCphi = Var("superCluster().phi()",float,doc="phi of the supercluster",precision=10),
+        SCrawESenergy = Var("superCluster().preshowerEnergy()",float,doc="raw preshower energy of the supercluster",precision=10),
+        SCclustersSize = Var("superCluster().clustersSize()",int,doc="number of clusters in the supercluster"),
+        hadronicOverEm = Var("hadronicOverEm()",float,doc="H/E of the supercluster (rechits within cone)",precision=10),
+        hadronicOverEmBc = Var("hcalOverEcalBc()",float,doc="H/E of the supercluster (rechits behind clusters)",precision=10),
+        seedEta = Var("seed().eta()",float,doc="eta of the supercluster seed",precision=10),
+        seedPhi = Var("seed().phi()",float,doc="phi of the supercluster seed",precision=10),
+        seedEnergy = Var("seed().energy()",float,doc="energy of the supercluster seed",precision=10),
+        e3x3 = Var("userFloat('e3x3')",float,doc="e3x3 of the supercluster, calculated with full 5x5 region",precision=10),
+        e5x5 = Var("full5x5_e5x5()",float,doc="e5x5 of the supercluster, calculated with full 5x5 region",precision=10),
+        sigmaietaiphi = Var("full5x5_showerShape().sigmaIetaIphi",float,doc="sigma_IetaIphi of the supercluster, calculated with full 5x5 region",precision=10),
+        eMax = Var("full5x5_showerShape().eMax",float,doc="eMax of the supercluster, calculated with full 5x5 region",precision=10),
+        e2nd = Var("full5x5_showerShape().e2nd",float,doc="e2nd of the supercluster, calculated with full 5x5 region",precision=10),
+        eLeft = Var("full5x5_showerShape().eLeft",float,doc="eLeft of the supercluster, calculated with full 5x5 region",precision=10),
+        eRight = Var("full5x5_showerShape().eRight",float,doc="eRight of the supercluster, calculated with full 5x5 region",precision=10),
+        eTop = Var("full5x5_showerShape().eTop",float,doc="eTop of the supercluster, calculated with full 5x5 region",precision=10),
+        eBottom = Var("full5x5_showerShape().eBottom",float,doc="eBottom of the supercluster, calculated with full 5x5 region",precision=10),
+        e2x5Max = Var("full5x5_showerShape().e2x5Max",float,doc="e2x5Max of the supercluster, calculated with full 5x5 region",precision=10),
+        e2x5Top = Var("full5x5_showerShape().e2x5Top",float,doc="e2x5Top of the supercluster, calculated with full 5x5 region",precision=10),
+        e2x5Bottom = Var("full5x5_showerShape().e2x5Bottom",float,doc="e2x5Bottom of the supercluster, calculated with full 5x5 region",precision=10),
+        e2x5Left = Var("full5x5_showerShape().e2x5Left",float,doc="e2x5Left of the supercluster, calculated with full 5x5 region",precision=10),
+        e2x5Right = Var("full5x5_showerShape().e2x5Right",float,doc="e2x5Right of the supercluster, calculated with full 5x5 region",precision=10),
+
+        trkEtaMode = Var("gsfTrack().etaMode()",float,doc="eta of the gsf track", precision=10),
+        trkPhiMode = Var("gsfTrack().phiMode()",float,doc="phi of the gsf track", precision=10),
+        trkPmode = Var("gsfTrack().pMode()",float,doc="p of the gsf track", precision=10),
+        trkPVtx = Var("trackMomentumAtVtx().Mag2()",float,doc="momentum of the track at the vertex", precision=10),
+        trkPOut = Var("trackMomentumOut().Mag2()",float,doc="momentum of the track at the outermost point", precision=10),
+
+        nrSatCrys = Var("nSaturatedXtals()",int,doc="Number of saturated crystals in the supercluster"),
+
+        ecalEnergy = Var("ecalEnergy()",float,doc="ECAL energy of the electron",precision=10),
+        ecalEnergyErr = Var("ecalEnergyError()",float,doc="ECAL energy uncertainty of the electron",precision=10),
+
+        dEtaSeedSC = Var("seed().eta() - superCluster().eta() ",float,doc="delta eta (seed,track) with sign",precision=10),
+        dPhiSeedSC = Var("seed().phi() - superCluster().phi() ",float,doc="delta phi (seed,track) with sign",precision=10),
+
+        iEtaOrX = Var("userInt('iEtaOrX')",int,doc="ieta of the supercluster seed"),
+        iPhiOrY = Var("userInt('iPhiOrY')",int,doc="iphi of the supercluster seed"),
+        iEtaMod5 = Var("userInt('iEtaMod5')",int,doc="ieta of the supercluster seed mod 5"),
+        iPhiMod2 = Var("userInt('iPhiMod2')",int,doc="iphi of the supercluster seed mod 2"),
+        iEtaMod20 = Var("userInt('iEtaMod20')",int,doc="ieta of the supercluster seed mod 20"),
+        iPhiMod20 = Var("userInt('iPhiMod20')",int,doc="iphi of the supercluster seed mod 20"),
+
+        etaCrySeed = Var("userInt('etaCrySeed')", int, doc="eta of seed in crystal indices"),
+        phiCrySeed = Var("userInt('phiCrySeed')", int, doc="phi of seed in crystal indices"),
+
+        eSubClusters = Var("userFloat('eSubClusters')",int,doc="number of subclusters in the supercluster"),
+        subClusterEnergy1 = Var("userFloat('subClusterEnergy1')",float,doc="energy of the first subcluster (excluding seed)",precision=10),
+        subClusterEta1 = Var("userFloat('subClusterEta1')",float,doc="eta of the first subcluster (excluding seed)",precision=10),
+        subClusterPhi1 = Var("userFloat('subClusterPhi1')",float,doc="phi of the first subcluster (excluding seed)",precision=10),
+        subClusterEmax1 = Var("userFloat('subClusterEmax1')",float,doc="Emax of the first subcluster (excluding seed)",precision=10),
+        subClusterE3x3_1 = Var("userFloat('subClusterE3x31')",float,doc="E3x3 of the first subcluster (excluding seed)",precision=10),
+        subClusterEnergy2 = Var("userFloat('subClusterEnergy2')",float,doc="energy of the second subcluster (excluding seed)",precision=10),
+        subClusterEta2 = Var("userFloat('subClusterEta2')",float,doc="eta of the second subcluster (excluding seed)",precision=10),
+        subClusterPhi2 = Var("userFloat('subClusterPhi2')",float,doc="phi of the second subcluster (excluding seed)",precision=10),
+        subClusterEmax2 = Var("userFloat('subClusterEmax2')",float,doc="Emax of the second subcluster (excluding seed)",precision=10),
+        subClusterE3x3_2 = Var("userFloat('subClusterE3x32')",float,doc="E3x3 of the second subcluster (excluding seed)",precision=10),
+        subClusterEnergy3 = Var("userFloat('subClusterEnergy3')",float,doc="energy of the third subcluster (excluding seed)",precision=10),
+        subClusterEta3 = Var("userFloat('subClusterEta3')",float,doc="eta of the third subcluster (excluding seed)",precision=10),
+        subClusterPhi3 = Var("userFloat('subClusterPhi3')",float,doc="phi of the third subcluster (excluding seed)",precision=10),
+        subClusterEmax3 = Var("userFloat('subClusterEmax3')",float,doc="Emax of the third subcluster (excluding seed)",precision=10),
+        subClusterE3x3_3 = Var("userFloat('subClusterE3x33')",float,doc="E3x3 of the third subcluster (excluding seed)",precision=10),
+
+        clusterMaxDR = Var("userFloat('clusterMaxDR')", float, doc = "maximum dR of subclusters wrt seed"),
+        clusterMaxDRDPhi = Var("userFloat('clusterMaxDRDPhi')", float, doc = "dphi of subcluster with maximum dR wrt seed"),
+        clusterMaxDRDEta = Var("userFloat('clusterMaxDRDEta')", float, doc = "deta of subcluster with maximum dR wrt seed"),
+        clusterMaxDRRawEnergy = Var("userFloat('clusterMaxDRRawEnergy')", float, doc = "raw energy of subcluster with maximum dR wrt seed"),
+
+        nPreshowerClusters = Var("userInt('nPreshowerClusters')",int,doc="number of preshower clusters in the supercluster"),
+        eESClusters = Var("userFloat('eESClusters')",float,doc="energy of the first preshower cluster",precision=10),
+        esClusterEnergy0 = Var("userFloat('esClusterEnergy0')",float,doc="energy of the first preshower cluster",precision=10),
+        esClusterEta0 = Var("userFloat('esClusterEta0')",float,doc="eta of the first preshower cluster",precision=10),
+        esClusterPhi0 = Var("userFloat('esClusterPhi0')",float,doc="phi of the first preshower cluster",precision=10),
+        esClusterEnergy1 = Var("userFloat('esClusterEnergy1')",float,doc="energy of the second preshower cluster",precision=10),
+        esClusterEta1 = Var("userFloat('esClusterEta1')",float,doc="eta of the second preshower cluster",precision=10),
+        esClusterPhi1 = Var("userFloat('esClusterPhi1')",float,doc="phi of the second preshower cluster",precision=10),
+        esClusterEnergy2 = Var("userFloat('esClusterEnergy2')",float,doc="energy of the third preshower cluster",precision=10),
+        esClusterEta2 = Var("userFloat('esClusterEta2')",float,doc="eta of the third preshower cluster",precision=10),
+        esClusterPhi2 = Var("userFloat('esClusterPhi2')",float,doc="phi of the third preshower cluster",precision=10),        
+
+        isEB = Var("isEB()",bool,doc="is EB?"),
+    )
+)
