@@ -329,6 +329,7 @@ annotation = '%s nevts:%d' % (outputFileNANO, options.maxEvents)
 # Process
 from Configuration.StandardSequences.Eras import eras
 from PhysicsTools.BParkingNano.modifiers_cff import *
+from Configuration.Eras.Modifier_run3_nanoAOD_124_cff import run3_nanoAOD_124
 
 # Attaching modifiers
 modifiers = []
@@ -364,6 +365,10 @@ if options.saveRegressionVars:
     # Save regression variables
     # see python/electronsBPark_cff.py for list
     modifiers.append(regressionVars)
+
+if options.saveAllNanoContent and options.year == 2022:
+    # add modifier for rerunning Tau IDs (WPs not included in 12_4_X MINIs, e.g. 2022)
+    modifiers.append(run3_nanoAOD_124)
 
 process = cms.Process('BParkNANO', eras.Run3, *modifiers)
 
