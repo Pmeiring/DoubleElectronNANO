@@ -236,7 +236,10 @@ if not options.inputFiles:
             'root://xrootd-cms.infn.it///store/data/Run2023D/ParkingDoubleElectronLowMass/MINIAOD/22Sep2023_v2-v1/2560000/f305f435-af66-4db3-ba8e-91ce02e6b431.root',
             ]
     elif options.year == 2024:
-        if options.isMC and options.isSignal:          pass # not implemented
+        if options.isMC and options.isSignal:
+            options.inputFiles = [
+            f'file:/eos/cms/store/cmst3/group/xee/signalSamples/HAHM_DarkPhoton_13p6TeV_Nov2024/HAHM_ZpToEE_MZp3_VBF_jetcut_ptj1_30_ptj2_30_lpt0p5_k1e_10_eps0p02_13p6TeV_50k_MINIAOD_2024.root'
+            ]
         elif options.isMC and options.isMinBias:       pass # not implemented
         elif options.isMC and options.isPromptJpsi:    pass # not implemented
         elif options.isMC and options.isPromptUpsilon: pass # not implemented
@@ -293,6 +296,9 @@ if options.saveRegressionVars:
     # Save regression variables
     # see python/electronsBPark_cff.py for list
     modifiers.append(regressionVars)
+
+if options.isSignal:
+    modifiers.append(allowedNumScaleWeights)
 
 era=eras.Run3 if options.year==2022 else eras.Run3_2023 if options.year==2023 else eras.Run3_2024
 process = cms.Process('BParkNANO', era, *modifiers)

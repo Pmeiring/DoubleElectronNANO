@@ -59,6 +59,9 @@ nanoSequence = cms.Sequence(nanoMetadata +
 nanoSequenceMC = cms.Sequence(particleLevelBParkSequence + genParticleBParkSequence + 
                               cms.Sequence(globalTablesMCTask) + cms.Sequence(genWeightsTableTask) + genParticleBParkTables + lheInfoTable)
 
+# In privatly produced signal MC, the scale variations were not added
+allowedNumScaleWeights.toModify(genWeightsTable, allowedNumScaleWeights = cms.vuint32(0))
+
 nanoSequenceMC_extra = cms.Sequence(cms.Sequence(genParticleTask)
                             + cms.Sequence(particleLevelTask)
                             + cms.Sequence(jetMCTask)
