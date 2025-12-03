@@ -20,7 +20,7 @@ flav_map = {0: 'unmatched',
 			4:'ele from c', 
 			3: 'ele from light or unknown'}
 
-plot_output_dir = '/eos/user/m/mkanemur/WebEOS/WorkingPoint'
+plot_output_dir = '/Users/pmeiring/debugwp/DoubleElectronNANO/wp/img'
 
 
 # root_dirs = {

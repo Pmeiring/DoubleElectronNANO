@@ -88,7 +88,7 @@ def plot_mva(pt_bins, perc_vals, id_type, output_dir):
 			Line2D([0], [0], color=color, lw=3, label=f"WP{wp}")  # no marker
 		)
 
-	plt.yscale('log')
+	# plt.yscale('log')
 	plt.xlabel('pT')
 	plt.ylabel('mvaID cut')
 	plt.title(f"MVA ID: {id_type} log-scaled\nHAHM_VBF")
@@ -141,8 +141,8 @@ def get_efficiency(data: dict, id_type: str, percentile_values: list, pt_step=0.
 		passed_electrons = np.sum(mva[pt_mask] > cut_val)
 		eff = passed_electrons / all_electrons
 		efficiencies.append(eff)
-		
-	return pt_bins, efficiencies
+
+	return pt_bins[:-1], efficiencies
 
 def plot_efficiency(pt_bins, wp_perc, id_type, output_dir, background=False):
 	
@@ -157,21 +157,13 @@ def plot_efficiency(pt_bins, wp_perc, id_type, output_dir, background=False):
 
 	for wp in wps:
 		color = cmap(norm(wp))
-		# NOTE: Plotting efficiencies here, accessing the 'eff' key
-		# We use the midpoint of the bins for the x-axis for a clearer line plot
-		x_values = (pt_bins[:-1] + pt_bins[1:]) / 2 
-		
+
 		if background:
 			data = wp_perc[wp]['bkg_eff']
-		else: 
+		else:
 			data = wp_perc[wp]['sig_eff']
 
-		# Ensure the number of x points matches the number of efficiencies
-		if len(x_values) == len(data):
-			plt.plot(x_values, data, label=f'WP{wp}', marker='o', linestyle='-', color=color)
-		else:
-			print(f"Warning: Data points mismatch for WP{wp}. Check binning.")
-			continue
+		plt.plot(pt_bins, data, label=f'WP{wp}', marker='o', linestyle='-', color=color)
 	
 	plt.xlabel('Electron $p_T$ [GeV]')
 	plt.ylabel('Efficiency')
@@ -213,7 +205,7 @@ def main(signal_data, background_data):
 		'Electron_PFEleMvaID_Winter22NoIsoV1Value': [sig_pf, bkg_pf], 
 		'Electron_lowPtID_10Jun2025': [sig_lowpt, bkg_lowpt]}
 
-	id_type = 'Electron_PFEleMvaID_Winter22NoIsoV1Value'
+	id_type = 'Electron_lowPtID_10Jun2025'
 
 	wp_perc = {}
 	for workingpoint in thresholds:
@@ -230,7 +222,7 @@ def main(signal_data, background_data):
 		wp_perc[workingpoint]['sig_eff'] = sig_eff
 		wp_perc[workingpoint]['bkg_eff'] = bkg_eff
 
-	plot_output_dir = '/eos/user/m/mkanemur/WebEOS/WorkingPoint'
+	plot_output_dir = '/Users/pmeiring/debugwp/DoubleElectronNANO/wp/img'
 	output_dir = f'{plot_output_dir}/HAHM_VBF'
 	plot_mva(pt_bins, wp_perc, id_type, output_dir)
 	plot_efficiency(pt_bins, wp_perc, id_type, output_dir)
